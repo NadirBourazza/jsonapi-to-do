@@ -1,17 +1,21 @@
 const express = require('express')
 const bodyParser = require('body-parser')
+const sqlite3 = require('sqlite3').verbose();
+
+const db = new sqlite3.Database('./todos.db');
 
 const app = express()
 const PORT = 3000;
 
 app.use(bodyParser.json())
 
-let todos = [
-    { id: 1, title: 'Take out the trash', completed: false },
-]
-
 app.get('/todos', (_, res) => {
-    res.json({data: todos});
+    db.all("SELECT * FROM todos", [], (err, rows) => {
+        if (err) {
+            throw err;
+        }
+        res.json({data: rows});
+    });
 });
 
 app.post('/todos', (req, res) => {
@@ -21,38 +25,36 @@ app.post('/todos', (req, res) => {
             throw new Error('title is required');
         }
         
-        const newTodo = {
-            title: title,
-            id: (todos.length + 1).toString(), // In a real app, I would use a real id generator
-            completed: false
-        }
-
-        todos.push(newTodo);
-        
-        res.status(201).json({data: newTodo});    
-    } catch (error) {
-        res.status(400).json({error: error.message});
+        db.run(`INSERT INTO todos(title) VALUES(?)`, [title], function(err) {
+            if (err) {
+                return console.log(err.message);
+            }
+            res.json({id: this.lastID, title: title, completed: false});
+        });
+    } catch (err) {
+        res.status(400).json({error: err.message});
     }
 });
 
 app.delete('/todos/:id', (req, res) => {
     try {
-        const id = parseInt(req.params.id);
-
+        const id = req.params.id;
         if (!id) {
             throw new Error('id is required');
         }
 
-        const todoIndex = todos.findIndex(todo => todo.id === id);
-        if (todoIndex === -1) {
-            throw new Error('id not found');
-        }
-
-        todos.splice(todoIndex, 1);
-        res.sendStatus(204);
-    }
-    catch (error) {
-        res.status(400).json({ error: error.message });
+        db.run(`DELETE FROM todos WHERE id = ?`, id, function(err) {
+            if (err) {
+                return console.log(err.message);
+            }
+            if (this.changes === 0) {
+                res.status(404).json({error: 'id not found'});
+            } else {
+                res.sendStatus(204);
+            }
+        });
+    } catch (err) {
+        res.status(400).json({error: err.message});
     }
 });
 
