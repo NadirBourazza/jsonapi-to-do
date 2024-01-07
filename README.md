@@ -1,6 +1,6 @@
 # My Todo App
 
-This is a simple Todo application built with Node.js and Express.js. It uses an in-memory data store to manage todos.
+This is a simple Todo application built with Node.js and Express.js. It uses an SQLite database to manage todos.
 
 ## Getting Started
 
